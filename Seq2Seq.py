@@ -316,6 +316,7 @@ if __name__ == "__main__":
     parser.add_argument("--root_path", type=str, default="./DataSet")
     parser.add_argument("--features", type=str, default="MS", help="[M, S, MS]")
     parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
+    parser.add_argument("--exp_num", type=int, default=1, help="实验次数")
 
     args = parser.parse_args()
     args.inverse = None
@@ -342,27 +343,27 @@ if __name__ == "__main__":
     else:  # 天气数据集
         args.freq = "wh"
 
-    exp = Exp_seq2seq(args)
+    for i in range(args.exp_num):
+        exp = Exp_seq2seq(args)
 
-    print(">>>>>>>start training : >>>>>>>>>>>>>>>>>>>>>>>>>>")
-    actual_train_epochs, train_cost_time = exp.train()
+        print(">>>>>>>start training : >>>>>>>>>>>>>>>>>>>>>>>>>>")
+        actual_train_epochs, train_cost_time = exp.train()
 
-    # test
-    print(">>>>>>>testing : <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-    mse, mae = exp.test()
+        print(">>>>>>>testing : <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        mse, mae = exp.test()
 
-    path_result = "./result_seq2seq.csv"
-    open(path_result, "a").close()
+        path_result = "./result_seq2seq.csv"
+        open(path_result, "a").close()
 
-    result = vars(args)
-    result["actual_train_epochs"] = actual_train_epochs
-    result["train_cost_time"] = train_cost_time
-    result["mse"] = mse
-    result["mae"] = mae
-    try:
-        df = pd.read_csv(path_result, header=0)
-        pd.concat([df, pd.DataFrame([result])]).to_csv(path_result, index=False)
-    except:
-        pd.DataFrame([result]).to_csv(path_result, index=False)
+        result = vars(args)
+        result["actual_train_epochs"] = actual_train_epochs
+        result["train_cost_time"] = train_cost_time
+        result["mse"] = mse
+        result["mae"] = mae
+        try:
+            df = pd.read_csv(path_result, header=0)
+            pd.concat([df, pd.DataFrame([result])]).to_csv(path_result, index=False)
+        except:
+            pd.DataFrame([result]).to_csv(path_result, index=False)
 
-    torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
