@@ -202,7 +202,8 @@ class Exp_Informer(Exp_Basic):
 
         best_model_path = path+'/'+'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
-        
+
+        print("Train, cost time: {}".format(time.time() - time_now))
         return self.model
 
     def test(self, setting):
