@@ -326,7 +326,7 @@ if __name__ == "__main__":
     # ETTh1: HourOfDay, DayOfWeek, DayOfMonth, DayOfYear, HUFL, HULL, MUFL, MULL, LUFL, LULL, OT
     # Weather: Month, Day, Hour, Po, P, U, Ff, Td, T
     data_parser = {
-        "ETTh1": {"data_path": "ETTh1.csv", "Target": "OT", "M": [11, 11, 11], "S": [5, 5, 1], "MS": [11, 5, 1]},
+        "ETTh1": {"data_path": "ETTh1.csv", "Target": "OT", "M": [11, 11, 7], "S": [5, 5, 1], "MS": [11, 5, 1]},
         "Weather_WH": {"data_path": "Weather_WH.csv", "Target": "T", "M": [9, 9, 6], "S": [4, 4, 1], "MS": [9, 4, 1]},
         "Weather_SZ": {"data_path": "Weather_SZ.csv", "Target": "T", "M": [9, 9, 6], "S": [4, 4, 1], "MS": [9, 4, 1]},
         "Weather_GZ": {"data_path": "Weather_GZ.csv", "Target": "T", "M": [9, 9, 6], "S": [4, 4, 1], "MS": [9, 4, 1]},
