@@ -1,4 +1,4 @@
-from utils.tools import dotdict
+import argparse
 from exp.exp_informer import Exp_Informer
 import torch
 from data.data_loader import Dataset_ETT_hour
@@ -8,75 +8,59 @@ import os
 from matplotlib import pyplot as plt
 import seaborn as sns
 
+parser = argparse.ArgumentParser(description="[Informer] Long Sequences Forecasting")
+parser.add_argument("--model", type=str, default="informer", help="[informer, informerstack]")
+parser.add_argument("--data", type=str, default="ETTh1", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
+parser.add_argument("--root_path", type=str, default="./DataSet", help="root path of the data file")
+parser.add_argument("--features", type=str, default="M", help="[M, S, MS]")
+parser.add_argument("--freq", type=str, default="h", help="[h, wh], h对应ETTh1, wh对应天气数据集")
+parser.add_argument("--checkpoints", type=str, default="./informer_checkpoints/", help="location of model checkpoints")
 
-args = dotdict()
-
-args.model = "informer"  # model of experiment, options: [informer, informerstack, informerlight(TBD)]
-# args.model = 'informerstack'  # model of experiment, options: [informer, informerstack, informerlight(TBD)]
-
-args.data = "ETTh1"  # data
-# args.data = 'Weather_WH'
-args.root_path = "./DataSet"  # root path of data file
-# args.data_path = 'ETTh1.csv'  # data file
-args.features = "M"  # forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate
-# args.target = 'OT'  # target feature in S or MS task
-args.freq = "h"  # freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h
-# args.freq = 'wh'  # 天气数据集，小时
-args.checkpoints = "./informer_checkpoints"  # location of model checkpoints
-
-args.seq_len = 96  # input sequence length of Informer encoder
-args.label_len = 48  # start token length of Informer decoder
-args.pred_len = 24  # prediction sequence length
+parser.add_argument("--seq_len", type=int, default=96, help="input sequence length of Informer encoder")
+parser.add_argument("--label_len", type=int, default=48, help="start token length of Informer decoder")
+parser.add_argument("--pred_len", type=int, default=24, help="prediction sequence length")
 # Informer decoder input: concat[start token series(label_len), zero padding series(pred_len)]
 
-# args.enc_in = 7  # encoder input size
-# args.dec_in = 7  # decoder input size
-# args.c_out = 7  # output size
-args.factor = 5  # probsparse attn factor
-args.d_model = 512  # dimension of model
-args.n_heads = 8  # num of heads
-args.e_layers = 3  # num of encoder layers
-args.s_layers = [3, 1]  # HX, 对应InformerStack模型
-args.inp_lens = [0, 2]
-args.d_layers = 2  # num of decoder layers
-args.d_ff = 2048  # dimension of fcn in model
-args.dropout = 0.05  # dropout
-# args.attn = "prob"  # attention used in encoder, options:[prob, full]
-args.attn = "full"
-args.embed = "timeF"  # time features encoding, options:[timeF, fixed, learned]
-# args.embed = 'fixed'
-args.activation = "gelu"  # activation
-# args.distil = True  # whether to use distilling in encoder
-args.distil = False  # whether to use distilling in encoder
-args.output_attention = False  # whether to output attention in ecoder
-args.mix = True
-args.padding = 0
-# args.freq = 'h'
+parser.add_argument("--factor", type=int, default=5, help="probsparse attn factor")
+parser.add_argument("--d_model", type=int, default=512, help="dimension of model")
+parser.add_argument("--n_heads", type=int, default=8, help="num of heads")
+parser.add_argument("--e_layers", type=int, default=2, help="num of encoder layers")
+parser.add_argument("--d_layers", type=int, default=1, help="num of decoder layers")
+parser.add_argument("--s_layers", type=list, default=[3, 1], help="num of stack encoder layers")
+parser.add_argument("--inp_lens", type=list, default=[0, 2], help="")
+parser.add_argument("--d_ff", type=int, default=2048, help="dimension of fcn")
+parser.add_argument("--dropout", type=float, default=0.05, help="dropout")
+parser.add_argument("--embed", type=str, default="timeF", help="[timeF, fixed, learned]")
+parser.add_argument("--activation", type=str, default="gelu", help="activation")
+parser.add_argument("--output_attention", type=bool, default=False, help="whether to output attention in ecoder")
+parser.add_argument("--mix", type=bool, default=True, help="use mix attention in generative decoder")
+parser.add_argument("--padding", type=int, default=0, help="padding type")
 
+parser.add_argument("--attn", type=str, default="prob", help="[prob, full]")
+parser.add_argument("--distil", type=bool, default=True, help="whether to use distilling in encoder")
+parser.add_argument("--dec_one_by_one", type=bool, default=False, help="whether dec_one_by_one")
 
-# args.dec_one_by_one = False
-args.dec_one_by_one = True
+parser.add_argument("--batch_size", type=int, default=32, help="batch size of train input data")
+parser.add_argument("--learning_rate", type=float, default=0.0001, help="optimizer learning rate")
+parser.add_argument("--loss", type=str, default="huber", help="模型用的损失函数，默认nn.MSELoss()")
+parser.add_argument("--lradj", type=str, default="type1", help="adjust learning rate")
+parser.add_argument("--use_amp", type=bool, default=False, help="use automatic mixed precision training")
 
-args.batch_size = 32
-args.learning_rate = 0.0001
-args.loss = "huber"  # 模型用的损失函数，默认nn.MSELoss()
-args.lradj = "type1"
-args.use_amp = False  # whether to use automatic mixed precision training
+parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
+parser.add_argument("--exp_num", type=int, default=1, help="实验次数")
+parser.add_argument("--train_epochs", type=int, default=6, help="train epochs")
+parser.add_argument("--patience", type=int, default=3, help="连续patience个epoch的验证集误差比最小验证集误差大，则停止训练")
+parser.add_argument("--des", type=str, default="exp", help="exp description")
 
-args.num_workers = 0  # DataLoader()的参数
-args.exp_num = 1  # 实验次数
-args.train_epochs = 6  # 训练集最大epoch数
-args.patience = 3  # 连续patience个epoch的验证集误差比最小验证集误差大，则停止训练
-args.des = "exp"
+args = parser.parse_args()
+args.inverse = None
+args.cols = None
 
 args.use_gpu = True if torch.cuda.is_available() else False
 args.gpu = 0
-
 args.use_multi_gpu = False
 args.devices = "0,1,2,3"
-
 args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
-
 if args.use_gpu and args.use_multi_gpu:
     args.devices = args.devices.replace(" ", "")
     device_ids = args.devices.split(",")
@@ -86,21 +70,16 @@ if args.use_gpu and args.use_multi_gpu:
 # Set augments by using data name
 data_parser = {
     "ETTh1": {"data_path": "ETTh1.csv", "Target": "OT", "M": [7, 7, 7], "S": [1, 1, 1], "MS": [7, 7, 1]},
-    "ETTh2": {"data_path": "ETTh2.csv", "Target": "OT", "M": [7, 7, 7], "S": [1, 1, 1], "MS": [7, 7, 1]},
-    "ETTm1": {"data_path": "ETTm1.csv", "Target": "OT", "M": [7, 7, 7], "S": [1, 1, 1], "MS": [7, 7, 1]},
-    "ETTm2": {"data_path": "ETTm2.csv", "Target": "OT", "M": [7, 7, 7], "S": [1, 1, 1], "MS": [7, 7, 1]},
     "Weather_WH": {"data_path": "Weather_WH.csv", "Target": "T", "M": [6, 6, 6], "S": [1, 1, 1], "MS": [6, 6, 1]},
     "Weather_SZ": {"data_path": "Weather_SZ.csv", "Target": "T", "M": [6, 6, 6], "S": [1, 1, 1], "MS": [6, 6, 1]},
     "Weather_GZ": {"data_path": "Weather_GZ.csv", "Target": "T", "M": [6, 6, 6], "S": [1, 1, 1], "MS": [6, 6, 1]},
 }
-
 data_info = data_parser[args.data]
 args.data_path = data_info["data_path"]
 args.target = data_info["Target"]
 args.enc_in, args.dec_in, args.c_out = data_info[args.features]
 
 args.detail_freq = args.freq  # 预测时相关
-# args.freq = args.freq[-1:]
 
 if args.dec_one_by_one and (args.features == "MS" or args.features == "S"):
     args.dec_in = 1

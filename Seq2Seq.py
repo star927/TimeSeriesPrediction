@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import torch
 from torch import nn
@@ -291,28 +292,30 @@ class Exp_seq2seq:
 
 
 if __name__ == "__main__":
-    args = dotdict()
+    parser = argparse.ArgumentParser(description="Seq2Seq, 时间序列预测")
 
-    # args.cell = "GRU"  # 编码器和解码器使用的模型
-    args.cell = "LSTM"
-    args.num_hidden = 16  # 隐藏层的节点个数
-    args.num_layer = 2  # 隐藏层的层数
-    args.dropout = 0.1
-    args.batch_size = 32
-    args.seq_len = 30  # 编码器输入长度
-    args.label_len = 1
-    args.pred_len = 7  # 解码器预测长度
-    args.learning_rate = 0.003
+    parser.add_argument("--cell", type=str, default="LSTM", help="[GRU, LSTM]")
+    parser.add_argument("--num_hidden", type=int, default=16, help="隐藏层的节点个数")
+    parser.add_argument("--num_layer", type=int, default=2, help="隐藏层的层数")
+    parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--seq_len", type=int, default=30, help="编码器输入长度")
+    parser.add_argument("--label_len", type=int, default=1)
+    parser.add_argument("--pred_len", type=int, default=7, help="解码器预测长度")
+    parser.add_argument("--learning_rate", type=float, default=0.003)
+    parser.add_argument("--train_epochs", type=int, default=2)
+
+    parser.add_argument("--data", type=str, default="ETTh1", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
+    parser.add_argument("--root_path", type=str, default="./DataSet")
+    parser.add_argument("--freq", type=str, default="h", help="[h, wh], h对应ETTh1, wh对应天气数据集")
+    parser.add_argument("--features", type=str, default="MS", help="[M, S, MS]")
+    parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
+
+    args = parser.parse_args()
+    args.inverse = None
+    args.cols = None
+
     args.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    args.train_epochs = 2
-
-    # args.data = "ETTh1"
-    args.data = "Weather_WH"
-    args.root_path = "./DataSet"
-    args.freq = "h"
-    # args.freq = "wh"
-
-    args.features = "MS"  # M, S, MS
 
     # ETTh1: HourOfDay, DayOfWeek, DayOfMonth, DayOfYear, HUFL, HULL, MUFL, MULL, LUFL, LULL, OT
     # Weather: Month, Day, Hour, Po, P, U, Ff, Td, T
@@ -328,8 +331,6 @@ if __name__ == "__main__":
     args.target = data_info["Target"]
     # 编码器输入变量的个数, 解码器输入变量的个数, 解码器预测变量的个数
     args.enc_in, args.dec_in, args.dec_out = data_info[args.features]
-
-    args.num_workers = 0  # DataLoader()的参数
 
     exp = Exp_seq2seq(args)
 
