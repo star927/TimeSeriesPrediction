@@ -150,6 +150,7 @@ class Exp_Informer(Exp_Basic):
             scaler = torch.cuda.amp.GradScaler()
 
         iter_count = 0
+        actual_train_epochs = self.args.train_epochs
         for epoch in range(self.args.train_epochs):
             train_loss = []
             
@@ -193,6 +194,7 @@ class Exp_Informer(Exp_Basic):
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
+                actual_train_epochs = epoch + 1
                 break
 
             # 每经过一个epoch，学习率变为原来1/2
@@ -201,8 +203,9 @@ class Exp_Informer(Exp_Basic):
         best_model_path = path+'/'+'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
 
-        print("Train, cost time: {}".format(time.time() - time_now))
-        return self.model
+        train_cost_time = time.time() - time_now
+        print("Train, cost time: {}".format(train_cost_time))
+        return actual_train_epochs, train_cost_time
 
     def test(self, setting):
         test_data, test_loader = self._get_data(flag='test')

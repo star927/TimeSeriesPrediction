@@ -194,6 +194,7 @@ class Exp_seq2seq:
         min_vali_loss = 1e10
         bad_train = 0
         iter_count = 0
+        actual_train_epochs = self.args.train_epochs
         for epoch in range(self.args.train_epochs):
             train_loss = []
 
@@ -239,13 +240,16 @@ class Exp_seq2seq:
             else:
                 bad_train += 1
                 if bad_train == 3:
+                    actual_train_epochs = epoch + 1
                     break
 
             # 每经过一个epoch，学习率变为原来1/2
             # adjust_learning_rate(model_optim, epoch + 1, self.args)
             # break
 
-        print("Train, cost time: {}".format(time.time() - time_now))
+        train_cost_time = time.time() - time_now
+        print("Train, cost time: {}".format(train_cost_time))
+        return actual_train_epochs, train_cost_time
 
     def test(self):
         test_data, test_loader = self._get_data(flag="test")
@@ -340,19 +344,20 @@ if __name__ == "__main__":
     exp = Exp_seq2seq(args)
 
     print(">>>>>>>start training : >>>>>>>>>>>>>>>>>>>>>>>>>>")
-    exp.train()
+    actual_train_epochs, train_cost_time = exp.train()
 
     # test
     print(">>>>>>>testing : <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
     mse, mae = exp.test()
 
-
     path_result = "./result_seq2seq.csv"
     open(path_result, "a").close()
 
     result = vars(args)
-    result["mse"] = round(mse, 3)
-    result["mae"] = round(mae, 3)
+    result["actual_train_epochs"] = actual_train_epochs
+    result["train_cost_time"] = train_cost_time
+    result["mse"] = mse
+    result["mae"] = mae
     try:
         df = pd.read_csv(path_result, header=0)
         pd.concat([df, pd.DataFrame([result])]).to_csv(path_result, index=False)

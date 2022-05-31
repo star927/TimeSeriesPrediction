@@ -121,7 +121,7 @@ for ii in range(args.exp_num):
 
     # train
     print(">>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>".format(setting))
-    exp.train(setting)
+    actual_train_epochs, train_cost_time = exp.train(setting)
 
     # test
     print(">>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<".format(setting))
@@ -131,8 +131,10 @@ for ii in range(args.exp_num):
     open(path_result, "a").close()
 
     result = vars(args)
-    result["mse"] = round(mse, 3)
-    result["mae"] = round(mae, 3)
+    result["actual_train_epochs"] = actual_train_epochs
+    result["train_cost_time"] = train_cost_time
+    result["mse"] = mse
+    result["mae"] = mae
     try:
         df = pd.read_csv(path_result, header=0)
         pd.concat([df, pd.DataFrame([result])]).to_csv(path_result, index=False)
