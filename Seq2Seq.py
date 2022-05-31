@@ -95,12 +95,12 @@ class EncoderDecoder(nn.Module):
         # batch_y: (batch_size, label_len + pred_len, 变量的个数)
         # batch_x_mask: (batch_size, label_len + pred_len, 时间特征的维度数)
 
-        x_enc = torch.cat([batch_x, batch_x_mark], dim=2).float().to(self.args.device)
-        # x_dec = torch.cat([batch_y, batch_y_mark], dim=2).float().to(self.args.device)
+        x_enc = torch.cat([batch_x, batch_x_mark], dim=2).float()
+        # x_dec = torch.cat([batch_y, batch_y_mark], dim=2).float()
         enc_out, state = self.encoder(x_enc)
         self.decoder.init_state(state)
         if self.training:  # 训练模式，Decoder输入的是准确的数据
-            x_dec = torch.cat([batch_y[:, :-1, :], batch_y_mark[:, :-1, :]], dim=2).float().to(self.args.device)
+            x_dec = torch.cat([batch_y[:, :-1, :], batch_y_mark[:, :-1, :]], dim=2).float()
             dec_out, state = self.decoder(x_dec, state)
             return dec_out
 
@@ -108,7 +108,7 @@ class EncoderDecoder(nn.Module):
         x_dec = batch_y[:, [0], :]
         out = []
         for i in range(self.args.pred_len):
-            x_dec = torch.cat([x_dec, batch_y_mark[:, [i], :]], dim=2).float().to(self.args.device)
+            x_dec = torch.cat([x_dec, batch_y_mark[:, [i], :]], dim=2).float()
             dec_out, state = self.decoder(x_dec, state)
             out.append(dec_out)
             x_dec = dec_out
@@ -275,11 +275,17 @@ class Exp_seq2seq:
         # batch_y: (batch_size, label_len + pred_len, 变量的个数)
         # batch_x_mask: (batch_size, label_len + pred_len, 时间特征的维度数)
 
+        batch_x = batch_x.float().to(self.device)
+        batch_y = batch_y.float().to(self.device)
+
+        batch_x_mark = batch_x_mark.float().to(self.device)
+        batch_y_mark = batch_y_mark.float().to(self.device)
+
         if self.args.features == "MS":
             batch_y = batch_y[:, :, [-1]]
 
         pred = self.model(batch_x, batch_y, batch_x_mark, batch_y_mark)
-        true = batch_y[:, -self.args.pred_len :, :].float().to(self.args.device)
+        true = batch_y[:, -self.args.pred_len :, :]
 
         return pred, true
 
