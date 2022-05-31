@@ -10,10 +10,9 @@ import seaborn as sns
 
 parser = argparse.ArgumentParser(description="[Informer] Long Sequences Forecasting")
 parser.add_argument("--model", type=str, default="informer", help="[informer, informerstack]")
-parser.add_argument("--data", type=str, default="ETTh1", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
+parser.add_argument("--data", type=str, default="Weather_WH", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
 parser.add_argument("--root_path", type=str, default="./DataSet", help="root path of the data file")
 parser.add_argument("--features", type=str, default="M", help="[M, S, MS]")
-parser.add_argument("--freq", type=str, default="h", help="[h, wh], h对应ETTh1, wh对应天气数据集")
 parser.add_argument("--checkpoints", type=str, default="./informer_checkpoints/", help="location of model checkpoints")
 
 parser.add_argument("--seq_len", type=int, default=96, help="input sequence length of Informer encoder")
@@ -78,6 +77,10 @@ data_info = data_parser[args.data]
 args.data_path = data_info["data_path"]
 args.target = data_info["Target"]
 args.enc_in, args.dec_in, args.c_out = data_info[args.features]
+if args.data == "ETTh1":
+    args.freq = "h"
+else:  # 天气数据集
+    args.freq = "wh"
 
 args.detail_freq = args.freq  # 预测时相关
 

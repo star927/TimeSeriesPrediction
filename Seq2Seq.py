@@ -307,7 +307,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--data", type=str, default="ETTh1", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
     parser.add_argument("--root_path", type=str, default="./DataSet")
-    parser.add_argument("--freq", type=str, default="h", help="[h, wh], h对应ETTh1, wh对应天气数据集")
     parser.add_argument("--features", type=str, default="MS", help="[M, S, MS]")
     parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
 
@@ -331,6 +330,10 @@ if __name__ == "__main__":
     args.target = data_info["Target"]
     # 编码器输入变量的个数, 解码器输入变量的个数, 解码器预测变量的个数
     args.enc_in, args.dec_in, args.dec_out = data_info[args.features]
+    if args.data == "ETTh1":
+        args.freq = "h"
+    else:  # 天气数据集
+        args.freq = "wh"
 
     exp = Exp_seq2seq(args)
 
