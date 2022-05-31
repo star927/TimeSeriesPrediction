@@ -275,11 +275,11 @@ class Exp_seq2seq:
         # batch_y: (batch_size, label_len + pred_len, 变量的个数)
         # batch_x_mask: (batch_size, label_len + pred_len, 时间特征的维度数)
 
-        batch_x = batch_x.float().to(self.device)
-        batch_y = batch_y.float().to(self.device)
+        batch_x = batch_x.float().to(self.args.device)
+        batch_y = batch_y.float().to(self.args.device)
 
-        batch_x_mark = batch_x_mark.float().to(self.device)
-        batch_y_mark = batch_y_mark.float().to(self.device)
+        batch_x_mark = batch_x_mark.float().to(self.args.device)
+        batch_y_mark = batch_y_mark.float().to(self.args.device)
 
         if self.args.features == "MS":
             batch_y = batch_y[:, :, [-1]]
