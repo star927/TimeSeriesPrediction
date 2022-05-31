@@ -149,8 +149,8 @@ class Exp_Informer(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        iter_count = 0
         for epoch in range(self.args.train_epochs):
-            iter_count = 0
             train_loss = []
             
             self.model.train()
@@ -173,9 +173,7 @@ class Exp_Informer(Exp_Basic):
                     speed = (time.time()-time_now)/iter_count
                     left_time = speed*((self.args.train_epochs - epoch)*train_steps - i)
                     print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
-                    iter_count = 0
-                    time_now = time.time()
-                
+
                 if self.args.use_amp:
                     scaler.scale(loss).backward()
                     scaler.step(model_optim)
