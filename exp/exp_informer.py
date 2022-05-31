@@ -125,7 +125,6 @@ class Exp_Informer(Exp_Basic):
                 vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
             total_loss.append(loss)
-            break
         total_loss = np.average(total_loss)
         self.model.train()
         return total_loss
@@ -184,7 +183,6 @@ class Exp_Informer(Exp_Basic):
                 else:
                     loss.backward()
                     model_optim.step()
-                break
 
             print("Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
             # 对一个epoch中的训练集误差求平均
@@ -201,8 +199,7 @@ class Exp_Informer(Exp_Basic):
 
             # 每经过一个epoch，学习率变为原来1/2
             adjust_learning_rate(model_optim, epoch+1, self.args)
-            break
-            
+
         best_model_path = path+'/'+'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
         
@@ -221,7 +218,6 @@ class Exp_Informer(Exp_Basic):
                 test_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             preds.append(pred.detach().cpu().numpy())
             trues.append(true.detach().cpu().numpy())
-            break
 
         preds = np.array(preds)
         trues = np.array(trues)
