@@ -270,6 +270,8 @@ class Exp_seq2seq:
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print("mse:{}, mae:{}".format(mse, mae))
 
+        return mse, mae
+
     def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
         # batch_x: (batch_size, seq_len, 变量的个数)
         # batch_x_mask: (batch_size, seq_len, 时间特征的维度数) 时间特征的维度数，如月、日、小时
@@ -342,6 +344,19 @@ if __name__ == "__main__":
 
     # test
     print(">>>>>>>testing : <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-    exp.test()
+    mse, mae = exp.test()
+
+
+    path_result = "./result_seq2seq.csv"
+    open(path_result, "a").close()
+
+    result = vars(args)
+    result["mse"] = round(mse, 3)
+    result["mae"] = round(mae, 3)
+    try:
+        df = pd.read_csv(path_result, header=0)
+        pd.concat([df, pd.DataFrame([result])]).to_csv(path_result, index=False)
+    except:
+        pd.DataFrame([result]).to_csv(path_result, index=False)
 
     torch.cuda.empty_cache()

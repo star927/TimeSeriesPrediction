@@ -1,6 +1,7 @@
 import argparse
 from exp.exp_informer import Exp_Informer
 import torch
+import pandas as pd
 from data.data_loader import Dataset_ETT_hour
 from torch.utils.data import DataLoader
 import numpy as np
@@ -124,7 +125,19 @@ for ii in range(args.exp_num):
 
     # test
     print(">>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<".format(setting))
-    exp.test(setting)
+    mse, mae = exp.test(setting)
+
+    path_result = "./result_informer.csv"
+    open(path_result, "a").close()
+
+    result = vars(args)
+    result["mse"] = round(mse, 3)
+    result["mae"] = round(mae, 3)
+    try:
+        df = pd.read_csv(path_result, header=0)
+        pd.concat([df, pd.DataFrame([result])]).to_csv(path_result, index=False)
+    except:
+        pd.DataFrame([result]).to_csv(path_result, index=False)
 
     torch.cuda.empty_cache()
 
