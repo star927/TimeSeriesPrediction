@@ -159,7 +159,6 @@ class Exp_seq2seq:
             pred, true = self._process_one_batch(vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
             total_loss.append(loss)
-            # break
         total_loss = np.average(total_loss)
         self.model.train()
         return total_loss
@@ -205,8 +204,6 @@ class Exp_seq2seq:
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
                     print("\tspeed: {:.4f}s/iter; left time: {:.4f}s".format(speed, left_time))
 
-                # break
-
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             # 对一个epoch中的训练集误差求平均
             train_loss = np.average(train_loss)
@@ -228,10 +225,6 @@ class Exp_seq2seq:
                     actual_train_epochs = epoch + 1
                     break
 
-            # 每经过一个epoch，学习率变为原来1/2
-            # adjust_learning_rate(model_optim, epoch + 1, self.args)
-            # break
-
         train_cost_time = time.time() - time_now
         print("Train, cost time: {}".format(train_cost_time))
         return actual_train_epochs, train_cost_time
@@ -252,8 +245,8 @@ class Exp_seq2seq:
         preds = np.array(preds)
         trues = np.array(trues)
         print("test shape:", preds.shape, trues.shape)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        preds = preds.reshape((-1, preds.shape[-2], preds.shape[-1]))
+        trues = trues.reshape((-1, trues.shape[-2], trues.shape[-1]))
         print("test shape:", preds.shape, trues.shape)
 
         mse, mae = metric(preds, trues)

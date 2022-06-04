@@ -1,5 +1,4 @@
 from data.data_loader import Dataset_ETT, Dataset_Weather
-from exp.exp_basic import Exp_Basic
 from models.model import Informer, InformerStack
 
 from utils.tools import EarlyStopping, adjust_learning_rate
@@ -20,9 +19,23 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-class Exp_Informer(Exp_Basic):
+class Exp_Informer:
     def __init__(self, args):
-        super(Exp_Informer, self).__init__(args)
+        self.args = args
+        self.device = self._acquire_device()
+        self.model = self._build_model().to(self.device)
+
+    def _acquire_device(self):
+        if self.args.use_gpu:
+            os.environ["CUDA_VISIBLE_DEVICES"] = (
+                str(self.args.gpu) if not self.args.use_multi_gpu else self.args.devices
+            )
+            device = torch.device("cuda:{}".format(self.args.gpu))
+            print("Use GPU: cuda:{}".format(self.args.gpu))
+        else:
+            device = torch.device("cpu")
+            print("Use CPU")
+        return device
 
     def _build_model(self):
         model_dict = {
@@ -104,7 +117,6 @@ class Exp_Informer(Exp_Basic):
             pred, true = self._process_one_batch(vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
             total_loss.append(loss)
-            break
         total_loss = np.average(total_loss)
         self.model.train()
         return total_loss
@@ -121,7 +133,7 @@ class Exp_Informer(Exp_Basic):
         time_now = time.time()
 
         train_steps = len(train_loader)
-        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
+        early_stopping = EarlyStopping()
 
         model_optim = self._select_optimizer()
         criterion = self._select_criterion()
@@ -154,8 +166,6 @@ class Exp_Informer(Exp_Basic):
                 loss.backward()
                 model_optim.step()
 
-                break
-
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             # 对一个epoch中的训练集误差求平均
             train_loss = np.average(train_loss)
@@ -175,7 +185,6 @@ class Exp_Informer(Exp_Basic):
 
             # 每经过一个epoch，学习率变为原来1/2
             adjust_learning_rate(model_optim, epoch + 1, self.args)
-            break
 
         best_model_path = path + "/" + "checkpoint.pth"
         self.model.load_state_dict(torch.load(best_model_path))
@@ -184,7 +193,7 @@ class Exp_Informer(Exp_Basic):
         print("Train, cost time: {}".format(train_cost_time))
         return actual_train_epochs, train_cost_time
 
-    def test(self, setting):
+    def test(self):
         test_data, test_loader = self._get_data(flag="test")
 
         self.model.eval()
@@ -196,7 +205,6 @@ class Exp_Informer(Exp_Basic):
             pred, true = self._process_one_batch(test_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             preds.append(pred.detach().cpu().numpy())
             trues.append(true.detach().cpu().numpy())
-            break
 
         preds = np.array(preds)
         trues = np.array(trues)
@@ -205,10 +213,7 @@ class Exp_Informer(Exp_Basic):
         trues = trues.reshape((-1, trues.shape[-2], trues.shape[-1]))
         print("test shape:", preds.shape, trues.shape)
 
-        (
-            mse,
-            mae,
-        ) = metric(preds, trues)
+        mse, mae = metric(preds, trues)
         print("mse:{}, mae:{}".format(mse, mae))
 
         return mse, mae

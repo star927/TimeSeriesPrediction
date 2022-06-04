@@ -30,7 +30,6 @@ parser.add_argument("--s_layers", type=list, default=[3, 1], help="num of stack 
 parser.add_argument("--inp_lens", type=list, default=[0, 2], help="")
 parser.add_argument("--d_ff", type=int, default=2048, help="dimension of fcn")
 parser.add_argument("--dropout", type=float, default=0.05, help="dropout")
-parser.add_argument("--embed", type=str, default="timeF", help="[timeF, fixed, learned]")
 parser.add_argument("--activation", type=str, default="gelu", help="activation")
 parser.add_argument("--output_attention", type=bool, default=False, help="whether to output attention in ecoder")
 parser.add_argument("--mix", type=bool, default=True, help="use mix attention in generative decoder")
@@ -47,8 +46,6 @@ parser.add_argument("--loss", type=str, default="huber", help="模型用的损�
 parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
 parser.add_argument("--exp_num", type=int, default=1, help="实验次数")
 parser.add_argument("--train_epochs", type=int, default=6, help="train epochs")
-parser.add_argument("--patience", type=int, default=3, help="连续patience个epoch的验证集误差比最小验证集误差大，则停止训练")
-parser.add_argument("--des", type=str, default="exp", help="exp description")
 
 args = parser.parse_args()
 
@@ -89,7 +86,7 @@ Exp = Exp_Informer
 
 for ii in range(args.exp_num):
     # setting record of experiments
-    setting = "{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_eb{}_dt{}_mx{}_{}_{}".format(
+    setting = "{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_dt{}_mx{}_{}".format(
         args.model,
         args.data,
         args.features,
@@ -103,10 +100,8 @@ for ii in range(args.exp_num):
         args.d_ff,
         args.attn,
         args.factor,
-        args.embed,
         args.distil,
         args.mix,
-        args.des,
         ii,
     )
 
@@ -119,7 +114,7 @@ for ii in range(args.exp_num):
 
     # test
     print(">>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<".format(setting))
-    mse, mae = exp.test(setting)
+    mse, mae = exp.test()
 
     path_result = "./result_informer.csv"
     open(path_result, "a").close()
