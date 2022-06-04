@@ -37,8 +37,8 @@ parser.add_argument("--mix", type=bool, default=True, help="use mix attention in
 parser.add_argument("--padding", type=int, default=0, help="padding type")
 
 parser.add_argument("--attn", type=str, default="prob", help="[prob, full]")
-parser.add_argument("--distil", action='store_true', default=False, help="whether to use distilling in encoder")
-parser.add_argument("--dec_one_by_one", action='store_true', default=False, help="whether dec_one_by_one")
+parser.add_argument("--distil", action="store_true", default=False, help="whether to use distilling in encoder")
+parser.add_argument("--dec_one_by_one", action="store_true", default=False, help="whether dec_one_by_one")
 
 parser.add_argument("--batch_size", type=int, default=32, help="batch size of train input data")
 parser.add_argument("--learning_rate", type=float, default=0.0001, help="optimizer learning rate")

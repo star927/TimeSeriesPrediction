@@ -7,6 +7,7 @@ import numpy as np
 from math import sqrt
 from utils.masking import TriangularCausalMask, ProbMask
 
+
 class FullAttention(nn.Module):
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
         super(FullAttention, self).__init__()
@@ -14,11 +15,11 @@ class FullAttention(nn.Module):
         self.mask_flag = mask_flag
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
-        
+
     def forward(self, queries, keys, values, attn_mask):
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
-        scale = self.scale or 1./sqrt(E)
+        scale = self.scale or 1.0 / sqrt(E)
 
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
         if self.mask_flag:
@@ -29,11 +30,12 @@ class FullAttention(nn.Module):
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         V = torch.einsum("bhls,bshd->blhd", A, values)
-        
+
         if self.output_attention:
             return (V.contiguous(), A)
         else:
             return (V.contiguous(), None)
+
 
 class ProbAttention(nn.Module):
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
@@ -44,7 +46,7 @@ class ProbAttention(nn.Module):
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
 
-    def _prob_QK(self, Q, K, sample_k, n_top): # n_top: c*ln(L_q)
+    def _prob_QK(self, Q, K, sample_k, n_top):  # n_top: c*ln(L_q)
         # 返回n_top个query与K的分数，和n_top和query的索引
         # Q [B, H, L, D]
         B, H, L_K, E = K.shape
@@ -52,7 +54,7 @@ class ProbAttention(nn.Module):
 
         # calculate the sampled Q_K
         K_expand = K.unsqueeze(-3).expand(B, H, L_Q, L_K, E)
-        index_sample = torch.randint(L_K, (L_Q, sample_k)) # real U = U_part(factor*ln(L_k))*L_q
+        index_sample = torch.randint(L_K, (L_Q, sample_k))  # real U = U_part(factor*ln(L_k))*L_q
         # K_sample: (B, H, L_Q, sample_k, E)
         # 对每一个query随机选取sample_k个key，即不是固定的sample_k个key，随机选取的sample_k个key中可能有重复
         K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :]
@@ -68,11 +70,9 @@ class ProbAttention(nn.Module):
         # M_top: (B, H, n_top)
 
         # use the reduced Q to calculate Q_K
-        Q_reduce = Q[torch.arange(B)[:, None, None],
-                     torch.arange(H)[None, :, None],
-                     M_top, :] # factor*ln(L_q)
+        Q_reduce = Q[torch.arange(B)[:, None, None], torch.arange(H)[None, :, None], M_top, :]  # factor*ln(L_q)
         # Q_reduce: (B, H, n_top, E), K.transpose(-2, -1): (B, H, E, L_K)
-        Q_K = torch.matmul(Q_reduce, K.transpose(-2, -1)) # factor*ln(L_q)*L_k
+        Q_K = torch.matmul(Q_reduce, K.transpose(-2, -1))  # factor*ln(L_q)*L_k
         # Q_K: (B, H, n_top, L_K)
 
         return Q_K, M_top
@@ -85,8 +85,8 @@ class ProbAttention(nn.Module):
             # V_sum: (B, H, D)
             contex = V_sum.unsqueeze(-2).expand(B, H, L_Q, V_sum.shape[-1]).clone()
             # contex: (B, H, L_Q, D)
-        else: # use mask
-            assert(L_Q == L_V) # requires that L_Q == L_V, i.e. for self-attention only
+        else:  # use mask
+            assert L_Q == L_V  # requires that L_Q == L_V, i.e. for self-attention only
             contex = V.cumsum(dim=-2)
         return contex
 
@@ -97,13 +97,13 @@ class ProbAttention(nn.Module):
             attn_mask = ProbMask(B, H, L_Q, index, scores, device=V.device)
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
-        attn = torch.softmax(scores, dim=-1) # nn.Softmax(dim=-1)(scores)
+        attn = torch.softmax(scores, dim=-1)  # nn.Softmax(dim=-1)(scores)
 
-        context_in[torch.arange(B)[:, None, None],
-                   torch.arange(H)[None, :, None],
-                   index, :] = torch.matmul(attn, V).type_as(context_in)
+        context_in[torch.arange(B)[:, None, None], torch.arange(H)[None, :, None], index, :] = torch.matmul(
+            attn, V
+        ).type_as(context_in)
         if self.output_attention:
-            attns = (torch.ones([B, H, L_V, L_V])/L_V).type_as(attn).to(attn.device)
+            attns = (torch.ones([B, H, L_V, L_V]) / L_V).type_as(attn).to(attn.device)
             attns[torch.arange(B)[:, None, None], torch.arange(H)[None, :, None], index, :] = attn
             return (context_in, attns)
         else:
@@ -114,21 +114,21 @@ class ProbAttention(nn.Module):
         B, L_Q, H, D = queries.shape
         _, L_K, _, _ = keys.shape
 
-        queries = queries.transpose(2,1)
-        keys = keys.transpose(2,1)
-        values = values.transpose(2,1)
+        queries = queries.transpose(2, 1)
+        keys = keys.transpose(2, 1)
+        values = values.transpose(2, 1)
 
-        U_part = self.factor * np.ceil(np.log(L_K)).astype('int').item() # c*ln(L_k)
-        u = self.factor * np.ceil(np.log(L_Q)).astype('int').item() # c*ln(L_q) 
+        U_part = self.factor * np.ceil(np.log(L_K)).astype("int").item()  # c*ln(L_k)
+        u = self.factor * np.ceil(np.log(L_Q)).astype("int").item()  # c*ln(L_q)
 
-        U_part = U_part if U_part<L_K else L_K
-        u = u if u<L_Q else L_Q
+        U_part = U_part if U_part < L_K else L_K
+        u = u if u < L_Q else L_Q
 
         # scores_top: (B, H, u, L_K), index: (B, H, u)
-        scores_top, index = self._prob_QK(queries, keys, sample_k=U_part, n_top=u) 
+        scores_top, index = self._prob_QK(queries, keys, sample_k=U_part, n_top=u)
 
         # add scale factor
-        scale = self.scale or 1./sqrt(D)
+        scale = self.scale or 1.0 / sqrt(D)
         if scale is not None:
             scores_top = scores_top * scale
         # get the context
@@ -138,16 +138,15 @@ class ProbAttention(nn.Module):
         context, attn = self._update_context(context, values, scores_top, index, L_Q, attn_mask)
         # context: (B, H, L_Q, D)
 
-        return context.transpose(2,1).contiguous(), attn
+        return context.transpose(2, 1).contiguous(), attn
 
 
 class AttentionLayer(nn.Module):
-    def __init__(self, attention, d_model, n_heads, 
-                 d_keys=None, d_values=None, mix=False):
+    def __init__(self, attention, d_model, n_heads, d_keys=None, d_values=None, mix=False):
         super(AttentionLayer, self).__init__()
 
-        d_keys = d_keys or (d_model//n_heads)
-        d_values = d_values or (d_model//n_heads)
+        d_keys = d_keys or (d_model // n_heads)
+        d_values = d_values or (d_model // n_heads)
 
         self.inner_attention = attention
         self.query_projection = nn.Linear(d_model, d_keys * n_heads)
@@ -167,14 +166,9 @@ class AttentionLayer(nn.Module):
         keys = self.key_projection(keys).view(B, S, H, -1)
         values = self.value_projection(values).view(B, S, H, -1)
 
-        out, attn = self.inner_attention(
-            queries,
-            keys,
-            values,
-            attn_mask
-        )
+        out, attn = self.inner_attention(queries, keys, values, attn_mask)
         if self.mix:
-            out = out.transpose(2,1).contiguous()
+            out = out.transpose(2, 1).contiguous()
         out = out.view(B, L, -1)
 
         return self.out_projection(out), attn
