@@ -6,8 +6,7 @@ from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader
 import time
-from data.data_loader import Dataset_ETT_hour, Dataset_Weather
-from utils.tools import adjust_learning_rate, dotdict
+from data.data_loader import Dataset_ETT, Dataset_Weather
 from utils.metrics import metric
 
 
@@ -130,25 +129,14 @@ class Exp_seq2seq:
         args = self.args
 
         data_dict = {
-            "ETTh1": Dataset_ETT_hour,
+            "ETT": Dataset_ETT,
             "Weather_WH": Dataset_Weather,
             "Weather_SZ": Dataset_Weather,
             "Weather_GZ": Dataset_Weather,
         }
         Data = data_dict[self.args.data]
-        # timeenc = 0 if args.embed!='timeF' else 1
-        timeenc = 1
 
-        if flag == "test":
-            shuffle_flag = False
-            drop_last = True
-            batch_size = args.batch_size
-            freq = args.freq
-        else:
-            shuffle_flag = True
-            drop_last = True
-            batch_size = args.batch_size
-            freq = args.freq
+        shuffle_flag = False if flag == "test" else True
         data_set = Data(
             root_path=args.root_path,
             data_path=args.data_path,
@@ -156,14 +144,10 @@ class Exp_seq2seq:
             size=[args.seq_len, args.label_len, args.pred_len],
             features=args.features,
             target=args.target,
-            inverse=args.inverse,
-            timeenc=timeenc,
-            freq=freq,
-            cols=args.cols,
         )
         print(flag, len(data_set))
         data_loader = DataLoader(
-            data_set, batch_size=batch_size, shuffle=shuffle_flag, num_workers=args.num_workers, drop_last=drop_last
+            data_set, batch_size=args.batch_size, shuffle=shuffle_flag, num_workers=args.num_workers, drop_last=True
         )
 
         return data_set, data_loader
@@ -272,7 +256,7 @@ class Exp_seq2seq:
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         print("test shape:", preds.shape, trues.shape)
 
-        mae, mse, rmse, mape, mspe = metric(preds, trues)
+        mse, mae = metric(preds, trues)
         print("mse:{}, mae:{}".format(mse, mae))
 
         return mse, mae
@@ -312,22 +296,20 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=0.003)
     parser.add_argument("--train_epochs", type=int, default=2)
 
-    parser.add_argument("--data", type=str, default="ETTh1", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
+    parser.add_argument("--data", type=str, default="ETT", help="[ETT, Weather_WH, Weather_SZ, Weather_GZ]")
     parser.add_argument("--root_path", type=str, default="./DataSet")
     parser.add_argument("--features", type=str, default="MS", help="[M, S, MS]")
     parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
     parser.add_argument("--exp_num", type=int, default=1, help="实验次数")
 
     args = parser.parse_args()
-    args.inverse = None
-    args.cols = None
 
     args.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-    # ETTh1: HourOfDay, DayOfWeek, DayOfMonth, DayOfYear, HUFL, HULL, MUFL, MULL, LUFL, LULL, OT
+    # ETT: HourOfDay, DayOfWeek, DayOfMonth, DayOfYear, HUFL, HULL, MUFL, MULL, LUFL, LULL, OT
     # Weather: Month, Day, Hour, Po, P, U, Ff, Td, T
     data_parser = {
-        "ETTh1": {"data_path": "ETTh1.csv", "Target": "OT", "M": [11, 11, 7], "S": [5, 5, 1], "MS": [11, 5, 1]},
+        "ETT": {"data_path": "ETT.csv", "Target": "OT", "M": [11, 11, 7], "S": [5, 5, 1], "MS": [11, 5, 1]},
         "Weather_WH": {"data_path": "Weather_WH.csv", "Target": "T", "M": [9, 9, 6], "S": [4, 4, 1], "MS": [9, 4, 1]},
         "Weather_SZ": {"data_path": "Weather_SZ.csv", "Target": "T", "M": [9, 9, 6], "S": [4, 4, 1], "MS": [9, 4, 1]},
         "Weather_GZ": {"data_path": "Weather_GZ.csv", "Target": "T", "M": [9, 9, 6], "S": [4, 4, 1], "MS": [9, 4, 1]},
@@ -338,10 +320,10 @@ if __name__ == "__main__":
     args.target = data_info["Target"]
     # 编码器输入变量的个数, 解码器输入变量的个数, 解码器预测变量的个数
     args.enc_in, args.dec_in, args.dec_out = data_info[args.features]
-    if args.data == "ETTh1":
-        args.freq = "h"
+    if args.data == "ETT":
+        args.dataset_flag = "ETT"
     else:  # 天气数据集
-        args.freq = "wh"
+        args.dataset_flag = "Weather"
 
     for i in range(args.exp_num):
         exp = Exp_seq2seq(args)

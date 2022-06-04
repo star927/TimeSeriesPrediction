@@ -11,9 +11,9 @@ from models.embed import DataEmbedding
 class Informer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len, 
                 factor=5, d_model=512, n_heads=8, e_layers=3, d_layers=2, d_ff=512, 
-                dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu', 
+                dropout=0.0, attn='prob', dataset_flag='h', activation='gelu',
                 output_attention = False, distil=True, mix=True,
-                device=torch.device('cuda:0'), dec_one_by_one=False, features='MS', *args):
+                device=torch.device('cuda:0'), dec_one_by_one=False, features='MS', **kwargs):
         super(Informer, self).__init__()
         self.c_out = c_out
         self.label_len = label_len
@@ -24,8 +24,8 @@ class Informer(nn.Module):
         self.features = features
 
         # Encoding
-        self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
-        self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
+        self.enc_embedding = DataEmbedding(enc_in, d_model, dataset_flag, dropout)
+        self.dec_embedding = DataEmbedding(dec_in, d_model, dataset_flag, dropout)
         # Attention
         Attn = ProbAttention if attn=='prob' else FullAttention
         # Encoder
@@ -118,7 +118,7 @@ class Informer(nn.Module):
 class InformerStack(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len, 
                 factor=5, d_model=512, n_heads=8, e_layers=[3,2,1], d_layers=2, d_ff=512, 
-                dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu',
+                dropout=0.0, attn='prob', dataset_flag='h', activation='gelu',
                 output_attention = False, distil=True, mix=True,
                 device=torch.device('cuda:0'), dec_one_by_one=False, features='MS', inp_lens=[0,1,2]):
         super(InformerStack, self).__init__()
@@ -132,8 +132,8 @@ class InformerStack(nn.Module):
         self.features = features
 
         # Encoding
-        self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
-        self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
+        self.enc_embedding = DataEmbedding(enc_in, d_model, dataset_flag, dropout)
+        self.dec_embedding = DataEmbedding(dec_in, d_model, dataset_flag, dropout)
         # Attention
         Attn = ProbAttention if attn=='prob' else FullAttention
         # Encoder

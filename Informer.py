@@ -2,7 +2,7 @@ import argparse
 from exp.exp_informer import Exp_Informer
 import torch
 import pandas as pd
-from data.data_loader import Dataset_ETT_hour
+from data.data_loader import Dataset_ETT, Dataset_Weather
 from torch.utils.data import DataLoader
 import numpy as np
 import os
@@ -11,9 +11,9 @@ import seaborn as sns
 
 parser = argparse.ArgumentParser(description="[Informer] Long Sequences Forecasting")
 parser.add_argument("--model", type=str, default="informer", help="[informer, informerstack]")
-parser.add_argument("--data", type=str, default="Weather_WH", help="[ETTh1, Weather_WH, Weather_SZ, Weather_GZ]")
+parser.add_argument("--data", type=str, default="ETT", help="[ETT, Weather_WH, Weather_SZ, Weather_GZ]")
 parser.add_argument("--root_path", type=str, default="./DataSet", help="root path of the data file")
-parser.add_argument("--features", type=str, default="M", help="[M, S, MS]")
+parser.add_argument("--features", type=str, default="MS", help="[M, S, MS]")
 parser.add_argument("--checkpoints", type=str, default="./informer_checkpoints/", help="location of model checkpoints")
 
 parser.add_argument("--seq_len", type=int, default=96, help="input sequence length of Informer encoder")
@@ -43,8 +43,6 @@ parser.add_argument("--dec_one_by_one", action='store_true', default=False, help
 parser.add_argument("--batch_size", type=int, default=32, help="batch size of train input data")
 parser.add_argument("--learning_rate", type=float, default=0.0001, help="optimizer learning rate")
 parser.add_argument("--loss", type=str, default="huber", help="模型用的损失函数，默认nn.MSELoss()")
-parser.add_argument("--lradj", type=str, default="type1", help="adjust learning rate")
-parser.add_argument("--use_amp", type=bool, default=False, help="use automatic mixed precision training")
 
 parser.add_argument("--num_workers", type=int, default=0, help="DataLoader()的参数")
 parser.add_argument("--exp_num", type=int, default=1, help="实验次数")
@@ -53,8 +51,6 @@ parser.add_argument("--patience", type=int, default=3, help="连续patience个ep
 parser.add_argument("--des", type=str, default="exp", help="exp description")
 
 args = parser.parse_args()
-args.inverse = None
-args.cols = None
 
 args.use_gpu = True if torch.cuda.is_available() else False
 args.gpu = 0
@@ -69,7 +65,7 @@ if args.use_gpu and args.use_multi_gpu:
 
 # Set augments by using data name
 data_parser = {
-    "ETTh1": {"data_path": "ETTh1.csv", "Target": "OT", "M": [7, 7, 7], "S": [1, 1, 1], "MS": [7, 7, 1]},
+    "ETT": {"data_path": "ETT.csv", "Target": "OT", "M": [7, 7, 7], "S": [1, 1, 1], "MS": [7, 7, 1]},
     "Weather_WH": {"data_path": "Weather_WH.csv", "Target": "T", "M": [6, 6, 6], "S": [1, 1, 1], "MS": [6, 6, 1]},
     "Weather_SZ": {"data_path": "Weather_SZ.csv", "Target": "T", "M": [6, 6, 6], "S": [1, 1, 1], "MS": [6, 6, 1]},
     "Weather_GZ": {"data_path": "Weather_GZ.csv", "Target": "T", "M": [6, 6, 6], "S": [1, 1, 1], "MS": [6, 6, 1]},
@@ -78,12 +74,10 @@ data_info = data_parser[args.data]
 args.data_path = data_info["data_path"]
 args.target = data_info["Target"]
 args.enc_in, args.dec_in, args.c_out = data_info[args.features]
-if args.data == "ETTh1":
-    args.freq = "h"
+if args.data == "ETT":
+    args.dataset_flag = "ETT"
 else:  # 天气数据集
-    args.freq = "wh"
-
-args.detail_freq = args.freq  # 预测时相关
+    args.dataset_flag = "Weather"
 
 if args.dec_one_by_one and (args.features == "MS" or args.features == "S"):
     args.dec_in = 1
@@ -143,40 +137,23 @@ for ii in range(args.exp_num):
 
     torch.cuda.empty_cache()
 
-    # 预测
-    # exp.predict(setting, True)
-    # prediction = np.load('./results/' + setting + '/real_prediction.npy')
-    # print(prediction.shape)
-    # 预测
-
-    # 训练集上的结果
-    # preds = np.load('./results/' + setting + '/pred.npy')
-    # trues = np.load('./results/' + setting + '/true.npy')
-    # plt.figure()
-    # plt.plot(trues[0, :, -1], label='GroundTruth')
-    # plt.plot(preds[0, :, -1], label='Prediction')
-    # plt.legend()
-    # plt.show()
-    # 训练集上的结果
-
     # 可视化注意力分数图
-    # Data = Dataset_ETT_hour
-    # timeenc = 0 if args.embed != "timeF" else 1
-    # flag = "test"
-    # shuffle_flag = False
-    # drop_last = True
-    # batch_size = 1
+    # data_dict = {
+    #     'ETT': Dataset_ETT,
+    #     'Weather_WH': Dataset_Weather,
+    #     'Weather_SZ': Dataset_Weather,
+    #     'Weather_GZ': Dataset_Weather,
+    # }
+    # Data = data_dict[args.data]
     # data_set = Data(
     #     root_path=args.root_path,
     #     data_path=args.data_path,
-    #     flag=flag,
+    #     flag="test",
     #     size=[args.seq_len, args.label_len, args.pred_len],
     #     features=args.features,
-    #     timeenc=timeenc,
-    #     freq=args.freq,
     # )
     # data_loader = DataLoader(
-    #     data_set, batch_size=batch_size, shuffle=shuffle_flag, num_workers=args.num_workers, drop_last=drop_last
+    #     data_set, batch_size=1, shuffle=False, num_workers=args.num_workers, drop_last=True
     # )
     #
     # args.output_attention = True

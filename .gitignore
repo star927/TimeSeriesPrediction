@@ -1,5 +1,8 @@
 .DS_Store
 .idea
 */__pycache__
+__pycache__
 informer_checkpoints
 results
+result_informer.csv
+result_seq2seq.csv

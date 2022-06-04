@@ -123,9 +123,6 @@ class ProbAttention(nn.Module):
 
         U_part = U_part if U_part<L_K else L_K
         u = u if u<L_Q else L_Q
-        # 以transformer的方式动态输出时, L_K=L_Q=1, U_part和u算出来是0, 二者的最小值应该是1
-        U_part = max(U_part, 1)
-        u = max(u, 1)
 
         # scores_top: (B, H, u, L_K), index: (B, H, u)
         scores_top, index = self._prob_QK(queries, keys, sample_k=U_part, n_top=u) 
