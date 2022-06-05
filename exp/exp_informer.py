@@ -65,7 +65,7 @@ class Exp_Informer:
                 distil=self.args.distil,
                 mix=self.args.mix,
                 device=self.device,
-                dec_one_by_one=self.args.dec_one_by_one,
+                transformer_dec=self.args.transformer_dec,
                 features=self.args.features,
                 inp_lens=self.args.inp_lens,
             ).float()

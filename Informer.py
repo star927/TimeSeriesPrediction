@@ -37,7 +37,7 @@ parser.add_argument("--padding", type=int, default=0, help="padding type")
 
 parser.add_argument("--attn", type=str, default="prob", help="[prob, full]")
 parser.add_argument("--distil", action="store_true", default=False, help="whether to use distilling in encoder")
-parser.add_argument("--dec_one_by_one", action="store_true", default=False, help="whether dec_one_by_one")
+parser.add_argument("--transformer_dec", action="store_true", default=False, help="是否采用Transformer的Decoder方式")
 
 parser.add_argument("--batch_size", type=int, default=32, help="batch size of train input data")
 parser.add_argument("--learning_rate", type=float, default=0.0001, help="optimizer learning rate")
@@ -76,7 +76,7 @@ if args.data == "ETT":
 else:  # 天气数据集
     args.dataset_flag = "Weather"
 
-if args.dec_one_by_one and (args.features == "MS" or args.features == "S"):
+if args.transformer_dec and (args.features == "MS" or args.features == "S"):
     args.dec_in = 1
 
 print("Args in experiment:")

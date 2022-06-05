@@ -17,8 +17,11 @@ class DecoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.activation = F.relu if activation == "relu" else F.gelu
 
-    def forward(self, x, cross, x_mask=None, cross_mask=None):
-        x = x + self.dropout(self.self_attention(x, x, x, attn_mask=x_mask)[0])
+    def forward(self, x, cross, dec_kv=None,x_mask=None, cross_mask=None):
+        if dec_kv is None:
+            x = x + self.dropout(self.self_attention(x, x, x, attn_mask=x_mask)[0])
+        else:
+            x = x + self.dropout(self.self_attention(x, dec_kv, dec_kv, attn_mask=x_mask)[0])
         x = self.norm1(x)
 
         x = x + self.dropout(self.cross_attention(x, cross, cross, attn_mask=cross_mask)[0])
@@ -35,10 +38,19 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.layers = nn.ModuleList(layers)
         self.norm = norm_layer
+        self.dec_kv = [None] * len(self.layers)
 
-    def forward(self, x, cross, x_mask=None, cross_mask=None):
-        for layer in self.layers:
-            x = layer(x, cross, x_mask=x_mask, cross_mask=cross_mask)
+    def forward(self, x, cross, x_mask=None, cross_mask=None, transformer_dec=False):
+        for i, layer in enumerate(self.layers):
+            if not transformer_dec:
+                x = layer(x, cross, x_mask=x_mask, cross_mask=cross_mask)
+            else:
+                if self.dec_kv[i] is None:
+                    self.dec_kv[i] = x
+                else:
+                    self.dec_kv[i] = torch.cat([self.dec_kv[i], x], dim=1)
+                x = layer(x, cross, self.dec_kv[i], x_mask=x_mask, cross_mask=cross_mask)
+
 
         if self.norm is not None:
             x = self.norm(x)
