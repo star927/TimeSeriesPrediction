@@ -48,6 +48,15 @@ parser.add_argument("--exp_num", type=int, default=1, help="实验次数")
 parser.add_argument("--train_epochs", type=int, default=6, help="train epochs")
 
 args = parser.parse_args()
+try:  # 命令行中输入的list会被当做字符串转成list，在命令行设置了该参数try下的语句会执行成功
+    args.s_layers = eval("".join(args.s_layers))
+except:  # 没有在命令行中这只该参数，则try下的语句执行不成功，使用默认参数
+    pass
+try:
+    args.inp_lens = eval("".join(args.inp_lens))
+except:
+    pass
+
 
 args.use_gpu = True if torch.cuda.is_available() else False
 args.gpu = 0
